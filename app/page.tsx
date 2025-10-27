@@ -1,176 +1,122 @@
-"use client";
-import { useState } from "react";
-import {
-  HamburgerMenuIcon,
-  DotFilledIcon,
-  CheckIcon,
-  ChevronRightIcon,
-} from "@radix-ui/react-icons";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+'use client';
 
-function RightSlot({ children }) {
-  return (
-    <div className="ml-auto pl-4 text-gray-500 group-hover:text-gray-200">
-      {children}
-    </div>
-  );
-}
-
-function DropdownMenuItem({ children, ...props }) {
-  return (
-    <DropdownMenu.Item
-      {...props}
-      className={
-        "group bg-white hover:bg-gray-700 hover:text-gray-200 text-xs rounded flex items-center h-6 px-1 pl-6 relative select-none" +
-        (props.disabled ? " text-gray-500" : "")
-      }
-    >
-      {children}
-    </DropdownMenu.Item>
-  );
-}
-
-function DropdownMenuCheckboxItem({ children, ...props }) {
-  return (
-    <DropdownMenu.CheckboxItem
-      {...props}
-      className="group bg-white hover:bg-gray-700 hover:text-gray-200 text-xs rounded flex items-center h-6 px-1 pl-6 relative select-none"
-    >
-      {children}
-    </DropdownMenu.CheckboxItem>
-  );
-}
-
-function DropdownMenuItemIndicator({ children, ...props }) {
-  return (
-    <DropdownMenu.ItemIndicator
-      {...props}
-      className="absolute left-0 w-6 inline-flex items-center justify-center"
-    >
-      {children}
-    </DropdownMenu.ItemIndicator>
-  );
-}
-
-function Separator() {
-  return <DropdownMenu.Separator className="h-[1px] bg-gray-300 m-1" />;
-}
-
-function DropdownMenuRadioItem({
-  children,
-  ...props
-}: {
-  children: React.ReactNode;
-  value: string;
-}) {
-  return (
-    <DropdownMenu.RadioItem
-      {...props}
-      className="bg-white hover:bg-gray-700 hover:text-gray-200 text-xs rounded flex items-center h-6 px-1 pl-6 relative select-none"
-    >
-      {children}
-    </DropdownMenu.RadioItem>
-  );
-}
+import { useApp } from '@/contexts/AppContext';
 
 export default function Home() {
-  const [bookmarksChecked, setBookmarksChecked] = useState(true);
-  const [urlsChecked, setUrlsChecked] = useState(false);
-  const [person, setPerson] = useState("pedro");
+  const { rootFolder, isLoading, error, openFolder, allImages } = useApp();
+
   return (
-    <div className="h-screen w-full flex flex-col space-y-4 items-center justify-center bg-gradient-to-r from-cyan-500 to-blue-500">
-      <h1 className="text-6xl text-white font-semibold">
-        Radix UI + Tailwind CSS
-      </h1>
-      <h1 className="text-4xl text-white font-semibold">Click me!</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-8">
+        {/* 头部 */}
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+            📁 图片查看器
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            使用 File System Access API 浏览本地图片
+          </p>
+        </header>
 
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger
-          asChild
-          className="bg-white text-xs rounded-3xl flex items-center h-8 px-2 relative select-none"
-        >
-          <button
-            aria-label="Customise options"
-            className="h-8 w-8 inline-flex items-center justify-center shadow-lg"
-          >
-            <HamburgerMenuIcon />
-          </button>
-        </DropdownMenu.Trigger>
-
-        <DropdownMenu.Content
-          sideOffset={5}
-          className="bg-white rounded p-1 shadow-lg"
-        >
-          <DropdownMenuItem>
-            New Tab <RightSlot>⌘+T</RightSlot>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            New Window <RightSlot>⌘+N</RightSlot>
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            New Private Window <RightSlot>⇧+⌘+N</RightSlot>
-          </DropdownMenuItem>
-          <DropdownMenu.Sub>
-            <DropdownMenu.SubTrigger className="group bg-white hover:bg-gray-700 hover:text-gray-200 hover:border-0 text-xs rounded flex items-center h-6 px-1 pl-6 relative select-none">
-              More Tools
-              <RightSlot>
-                <ChevronRightIcon />
-              </RightSlot>
-            </DropdownMenu.SubTrigger>
-            <DropdownMenu.SubContent
-              sideOffset={2}
-              alignOffset={-5}
-              className="bg-white rounded p-1 shadow-lg"
-            >
-              <DropdownMenuItem>
-                Save Page As… <RightSlot>⌘+S</RightSlot>
-              </DropdownMenuItem>
-              <DropdownMenuItem>Create Shortcut…</DropdownMenuItem>
-              <DropdownMenuItem>Name Window…</DropdownMenuItem>
-              <Separator />
-              <DropdownMenuItem>Developer Tools</DropdownMenuItem>
-            </DropdownMenu.SubContent>
-          </DropdownMenu.Sub>
-          <Separator />
-          <DropdownMenuCheckboxItem
-            checked={bookmarksChecked}
-            onCheckedChange={setBookmarksChecked}
-          >
-            <DropdownMenuItemIndicator>
-              <CheckIcon />
-            </DropdownMenuItemIndicator>
-            Show Bookmarks <RightSlot>⌘+B</RightSlot>
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem
-            checked={urlsChecked}
-            onCheckedChange={setUrlsChecked}
-          >
-            <DropdownMenuItemIndicator>
-              <CheckIcon />
-            </DropdownMenuItemIndicator>
-            Show Full URLs
-          </DropdownMenuCheckboxItem>
-          <Separator />
-          <DropdownMenu.Label className="pl-6 leading-6 text-xs text-gray-700">
-            Contributors
-          </DropdownMenu.Label>
-
-          <DropdownMenu.RadioGroup value={person} onValueChange={setPerson}>
-            <DropdownMenuRadioItem value="pedro">
-              <DropdownMenuItemIndicator>
-                <DotFilledIcon />
-              </DropdownMenuItemIndicator>
-              Pedro Sanchez
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="pablo">
-              <DropdownMenuItemIndicator>
-                <DotFilledIcon />
-              </DropdownMenuItemIndicator>
-              Pablo Sanchez
-            </DropdownMenuRadioItem>
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+        {/* 主要内容区域 */}
+        <main>
+          {!rootFolder ? (
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                <div className="mb-6">
+                  <svg
+                    className="w-24 h-24 mx-auto text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
+                </div>
+                
+                <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">
+                  开始使用
+                </h2>
+                
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  点击下方按钮选择包含图片的文件夹
+                </p>
+                
+                <button
+                  onClick={openFolder}
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? '加载中...' : '📂 打开文件夹'}
+                </button>
+                
+                {error && (
+                  <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded">
+                    {error}
+                  </div>
+                )}
+                
+                <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+                  <p>⚠️ 需要 Chrome 或 Edge 浏览器</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
+                    {rootFolder.name}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    共找到 {allImages.length} 张图片
+                  </p>
+                </div>
+                
+                <button
+                  onClick={openFolder}
+                  className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  切换文件夹
+                </button>
+              </div>
+              
+              {/* 图片网格 - 临时简单展示 */}
+              {allImages.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mt-6">
+                  {allImages.slice(0, 12).map((image) => (
+                    <div
+                      key={image.id}
+                      className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+                    >
+                      <img
+                        src={image.thumbnail}
+                        alt={image.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  此文件夹中没有图片
+                </div>
+              )}
+              
+              {allImages.length > 12 && (
+                <div className="mt-4 text-center text-gray-600 dark:text-gray-300">
+                  还有 {allImages.length - 12} 张图片...
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

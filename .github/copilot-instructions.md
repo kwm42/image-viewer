@@ -4,7 +4,13 @@
 所有的回答使用中文，除了特定的代码和专有名词，所有chat中的回答都使用中文。
 
 ## Project Overview
-This is a Next.js 13+ application using the App Router pattern, showcasing Radix UI components with Tailwind CSS styling. Despite the "image-viewer" folder name, this is actually a Radix UI example project demonstrating dropdown menu components.
+这是一个基于 Next.js 13+ App Router 的本地图片查看器应用，使用 Radix UI 组件和 Tailwind CSS 进行样式设计。
+
+### 核心功能
+1. **文件夹浏览器**: 树状目录结构，支持展开/收起
+2. **图片展示**: 显示文件夹内所有图片（支持递归子文件夹或仅当前文件夹）
+3. **图片预览**: 弹窗预览，支持自适应大小调整
+4. **幻灯片播放**: 可配置播放时长和转换动画
 
 ## Tech Stack & Architecture
 - **Framework**: Next.js 13+ with App Router (`app/` directory structure)
