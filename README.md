@@ -1,25 +1,37 @@
-# Radix UI Example
+# Vite + React + Typescript + Electron - Starter
 
-This example showcases a few basic Radix UI components
+https://github.com/AleBL/vite-reactts-electron-starter/assets/26389226/2697ab5c-b6c5-4c28-ab40-1a237e12cf8d
 
-## Deploy your own
+> It is a simple starter template without unnecessary packages.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/next.js/tree/canary/examples/radix-ui&project-name=radix-ui&repository-name=radix-ui)
+This very simple Starter template, utilizes [Vite](https://github.com/vitejs/vite), [Tailwind](https://tailwindcss.com/), [React](https://reactjs.org/), [Typescript](https://www.typescriptlang.org/) and [Electron](https://electronjs.org/).
 
-## How to use
+By default, the React framework is used for the interface, but you can easily use any other framework such as Vue, Preact, Angular, Svelte or anything else.
 
-Execute [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [npm](https://docs.npmjs.com/cli/init), [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/), or [pnpm](https://pnpm.io) to bootstrap the example:
+> Vite is framework agnostic
 
-```bash
-npx create-next-app --example radix-ui radix-ui-app
-```
+## Installation
 
-```bash
-yarn create next-app --example radix-ui radix-ui-app
-```
+Clone this repo and install all dependencies  
+`yarn` or `npm install`
 
-```bash
-pnpm create next-app --example radix-ui radix-ui-app
-```
+## Development
 
-Deploy it to the cloud with [Vercel](https://vercel.com/new?utm_source=github&utm_medium=readme&utm_campaign=next-example) ([Documentation](https://nextjs.org/docs/deployment)).
+`yarn dev` or `npm run dev`
+
+## Build
+
+`yarn build` or `npm run build`
+
+## Publish
+
+`yarn dist` or `npm run dist`
+
+## More advanced templates  
+
+If you are looking for more advanced templates than this, please go to one of the following links (these are some other links out of the **[awesome-vite](https://github.com/vitejs/awesome-vite)** repo) or you can help me make this template better 🙂  
+
+Links: 
+- [vite-react-electron](https://github.com/caoxiemeihao/vite-react-electron)
+- [electron-vite-react](https://github.com/twstyled/electron-vite-react)
+- [vite-electron-esbuild-starter](https://github.com/jctaoo/vite-electron-esbuild-starter)
