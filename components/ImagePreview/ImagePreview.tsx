@@ -5,10 +5,12 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { ImageFile } from "@/types";
 import { IconButton } from "@/components/ui/IconButton";
+import { ensureImageURL } from "@/lib/imageUtils";
 
 interface ImagePreviewProps {
   image: ImageFile | null;
   images: ImageFile[];
+  isLoading?: boolean;
   onClose: () => void;
   onNavigate: (direction: "prev" | "next") => void;
 }
@@ -16,12 +18,14 @@ interface ImagePreviewProps {
 export function ImagePreview({
   image,
   images,
+  isLoading = false,
   onClose,
   onNavigate,
 }: ImagePreviewProps) {
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [fitMode, setFitMode] = useState<"contain" | "cover" | "actual">("contain");
+  const [isImageReady, setIsImageReady] = useState(false);
 
   const currentIndex = image ? images.findIndex((img) => img.path === image.path) : -1;
   const isOpen = image !== null;
@@ -32,8 +36,35 @@ export function ImagePreview({
       setScale(1);
       setRotation(0);
       setFitMode("contain");
+      setIsImageReady(false);
     }
   }, [image?.path, isOpen]);
+
+  useEffect(() => {
+    if (!image || !isOpen) {
+      setIsImageReady(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    ensureImageURL(image)
+      .then(() => {
+        if (!cancelled) {
+          setIsImageReady(true);
+        }
+      })
+      .catch((err) => {
+        console.error("加载预览图片失败:", err);
+        if (!cancelled) {
+          setIsImageReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [image, isOpen]);
 
   // 缩放控制
   const handleZoomIn = useCallback(() => {
@@ -121,6 +152,8 @@ export function ImagePreview({
 
   if (!image) return null;
 
+  const loading = isLoading || !isImageReady;
+
   // 根据 fitMode 设置样式
   const imageStyle: React.CSSProperties = {
     transform: `scale(${scale}) rotate(${rotation}deg)`,
@@ -186,12 +219,36 @@ export function ImagePreview({
               }
             }}
           >
-            <img
-              src={image.url}
-              alt={image.name}
-              style={imageStyle}
-              className="pointer-events-none"
-            />
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg
+                  className="h-10 w-10 animate-spin text-white/70"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <img
+                src={image.url}
+                alt={image.name}
+                style={imageStyle}
+                className="pointer-events-none"
+              />
+            )}
           </div>
 
           {/* 底部控制栏 */}
@@ -274,17 +331,17 @@ export function ImagePreview({
 
             {/* 图片信息 */}
             <div className="mt-3 text-center text-white/70 text-sm">
-              {image.width && image.height && (
+              {image.width > 0 && image.height > 0 && (
                 <span>
                   {image.width} × {image.height} px
                 </span>
               )}
-              {image.size && (
+              {image.size > 0 && (
                 <span className="ml-4">
                   {(image.size / 1024 / 1024).toFixed(2)} MB
                 </span>
               )}
-              {image.modifiedAt && (
+              {image.modifiedAt && image.modifiedAt.getTime() > 0 && (
                 <span className="ml-4">
                   {new Date(image.modifiedAt).toLocaleDateString("zh-CN")}
                 </span>

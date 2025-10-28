@@ -159,6 +159,7 @@ export default function Home() {
       <ImagePreview
         image={viewerState.currentImage}
         images={viewerState.images}
+        isLoading={viewerState.isLoading}
         onClose={closeImageViewer}
         onNavigate={navigateImage}
       />

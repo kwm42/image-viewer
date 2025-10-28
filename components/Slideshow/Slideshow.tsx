@@ -8,6 +8,7 @@ import { SlideshowControls } from './SlideshowControls';
 import { SlideshowSettingsPanel } from './SlideshowSettings';
 import { transitions, getTransition } from './transitions';
 import { IconButton } from '@/components/ui/IconButton';
+import { ensureImageURL } from '@/lib/imageUtils';
 
 interface SlideshowProps {
   images: ImageFile[];
@@ -31,9 +32,37 @@ export function Slideshow({
   const [remainingTime, setRemainingTime] = useState(settings.interval / 1000);
   const [direction, setDirection] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
   const currentImage = images[currentIndex];
   const totalImages = images.length;
+
+  useEffect(() => {
+    if (!currentImage) {
+      setIsImageLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsImageLoading(true);
+
+    ensureImageURL(currentImage)
+      .then(() => {
+        if (!cancelled) {
+          setIsImageLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('加载幻灯片图片失败:', err);
+        if (!cancelled) {
+          setIsImageLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentImage]);
 
   // 获取下一张图片索引
   const getNextIndex = useCallback(() => {
@@ -203,11 +232,35 @@ export function Slideshow({
             transition={transition}
             className="absolute inset-0 flex items-center justify-center"
           >
-            <img
-              src={currentImage.url}
-              alt={currentImage.name}
-              className="max-w-full max-h-full object-contain"
-            />
+            {isImageLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg
+                  className="h-12 w-12 animate-spin text-white/70"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <img
+                src={currentImage.url}
+                alt={currentImage.name}
+                className="max-w-full max-h-full object-contain"
+              />
+            )}
 
             {/* 图片信息 */}
             {settings.showInfo && (
@@ -220,9 +273,15 @@ export function Slideshow({
                         {currentImage.width} × {currentImage.height} px
                       </span>
                     )}
-                    <span>{(currentImage.size / 1024 / 1024).toFixed(2)} MB</span>
                     <span>
-                      {new Date(currentImage.modifiedAt).toLocaleDateString('zh-CN')}
+                      {currentImage.size > 0
+                        ? `${(currentImage.size / 1024 / 1024).toFixed(2)} MB`
+                        : '—'}
+                    </span>
+                    <span>
+                      {currentImage.modifiedAt && currentImage.modifiedAt.getTime() > 0
+                        ? new Date(currentImage.modifiedAt).toLocaleDateString('zh-CN')
+                        : '—'}
                     </span>
                   </div>
                 </div>

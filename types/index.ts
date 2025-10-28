@@ -5,8 +5,8 @@ export interface FolderNode {
   handle: FileSystemDirectoryHandle;
   path: string;
   children: FolderNode[];
-  imageCount: number;
-  totalImageCount: number;
+  imageCount?: number;
+  totalImageCount?: number;
   isExpanded: boolean;
   isLoaded: boolean;
   level: number;
@@ -28,6 +28,7 @@ export interface ImageFile {
   createdAt: Date;
   modifiedAt: Date;
   folderPath: string;
+  metadataLoaded?: boolean;
 }
 
 // 视图模式

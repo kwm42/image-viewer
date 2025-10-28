@@ -4,6 +4,46 @@ import { useState, useCallback } from 'react';
 import type { ImageFile, FolderNode } from '@/types';
 import { isImageFile } from '@/lib/fileUtils';
 import { cacheManager } from '@/lib/cacheManager';
+import { ensureImageMetadata, ensureImageURL } from '@/lib/imageUtils';
+import { THUMBNAIL_SIZE } from '@/lib/constants';
+
+const MAX_THUMBNAIL_CONCURRENCY = 4;
+let activeThumbnailTasks = 0;
+const thumbnailTaskQueue: Array<() => void> = [];
+const thumbnailPromises = new Map<string, Promise<string>>();
+
+function runNextThumbnailTask() {
+  if (activeThumbnailTasks >= MAX_THUMBNAIL_CONCURRENCY) {
+    return;
+  }
+
+  const nextTask = thumbnailTaskQueue.shift();
+  if (!nextTask) {
+    return;
+  }
+
+  nextTask();
+}
+
+function scheduleThumbnailTask<T>(task: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const execute = () => {
+      activeThumbnailTasks++;
+
+      task()
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          activeThumbnailTasks = Math.max(0, activeThumbnailTasks - 1);
+          runNextThumbnailTask();
+        });
+    };
+
+    thumbnailTaskQueue.push(execute);
+
+    queueMicrotask(runNextThumbnailTask);
+  });
+}
 
 export function useFileSystem() {
   const [isSupported, setIsSupported] = useState(
@@ -40,73 +80,38 @@ export function useFileSystem() {
     async (
       dirHandle: FileSystemDirectoryHandle,
       parentPath = '',
-      fastMode = true
+      options: { includeImages?: boolean } = {}
     ): Promise<{ folders: FolderNode[]; images: ImageFile[] }> => {
+      const includeImages = options.includeImages ?? true;
       const folders: FolderNode[] = [];
-      const imageFiles: Array<{ file: File; handle: FileSystemFileHandle; path: string }> = [];
       const images: ImageFile[] = [];
 
       try {
-        // 第一步：快速扫描文件和文件夹
-        // @ts-ignore - TypeScript 类型定义可能不完整
+        // @ts-ignore - 某些浏览器类型定义不完整
         for await (const entry of dirHandle.values()) {
           const entryPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
 
           if (entry.kind === 'directory') {
-            const imageCount = await countImages(entry);
             folders.push({
               id: crypto.randomUUID(),
               name: entry.name,
               handle: entry,
               path: entryPath,
               children: [],
-              imageCount,
-              totalImageCount: imageCount,
               isExpanded: false,
               isLoaded: false,
               level: parentPath.split('/').filter(Boolean).length,
             });
-          } else if (entry.kind === 'file') {
+          } else if (entry.kind === 'file' && includeImages) {
             if (isImageFile(entry.name)) {
-              const file = await entry.getFile();
-              imageFiles.push({ file, handle: entry, path: entryPath });
+              images.push(createImagePlaceholder(entry, entryPath));
             }
-          }
-        }
-
-        if (fastMode) {
-          // 快速模式：先返回基本信息，不加载缩略图
-          images.push(
-            ...await Promise.all(
-              imageFiles.map(({ file, handle, path }) =>
-                createImageFileFast(file, handle, path)
-              )
-            )
-          );
-        } else {
-          // 完整模式：批量并发处理图片（每次处理 20 张）
-          const batchSize = 20;
-          for (let i = 0; i < imageFiles.length; i += batchSize) {
-            const batch = imageFiles.slice(i, i + batchSize);
-            const batchResults = await Promise.all(
-              batch.map(async ({ file, handle, path }) => {
-                try {
-                  return await createImageFile(file, handle, path);
-                } catch (err) {
-                  console.error(`读取文件失败: ${file.name}`, err);
-                  return null;
-                }
-              })
-            );
-            
-            images.push(...batchResults.filter((img): img is ImageFile => img !== null));
           }
         }
       } catch (err) {
         console.error('扫描文件夹失败:', err);
       }
 
-      // 按名称排序
       folders.sort((a, b) => a.name.localeCompare(b.name));
       images.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -125,7 +130,6 @@ export function useFileSystem() {
       level = 0
     ): Promise<{ folders: FolderNode[]; images: ImageFile[] }> => {
       const folders: FolderNode[] = [];
-      const imageFiles: Array<{ file: File; handle: FileSystemFileHandle; path: string }> = [];
       const images: ImageFile[] = [];
 
       try {
@@ -136,43 +140,29 @@ export function useFileSystem() {
 
           if (entry.kind === 'directory') {
             // 递归扫描子文件夹
-            const { folders: subFolders, images: subImages } = await scanFolderStructure(
+            const { folders: subFolders } = await scanFolderStructure(
               entry,
               entryPath,
               level + 1
             );
-            
-            const imageCount = await countImages(entry);
-            const totalImageCount = imageCount + subImages.length;
-            
+
             folders.push({
               id: crypto.randomUUID(),
               name: entry.name,
               handle: entry,
               path: entryPath,
               children: subFolders,
-              imageCount,
-              totalImageCount,
               isExpanded: false,
               isLoaded: true,
               level,
             });
           } else if (entry.kind === 'file') {
             if (isImageFile(entry.name)) {
-              const file = await entry.getFile();
-              imageFiles.push({ file, handle: entry, path: entryPath });
+              images.push(createImagePlaceholder(entry, entryPath));
             }
           }
         }
 
-        // 第二步：快速创建图片对象（不生成缩略图，懒加载）
-        images.push(
-          ...await Promise.all(
-            imageFiles.map(({ file, handle, path }) =>
-              createImageFileFast(file, handle, path)
-            )
-          )
-        );
       } catch (err) {
         console.error('扫描文件夹结构失败:', err);
       }
@@ -224,157 +214,91 @@ export function useFileSystem() {
  * 按需加载图片缩略图
  */
 export async function loadThumbnail(image: ImageFile): Promise<string> {
-  // 如果已有缩略图，直接返回
   if (image.thumbnail) {
     return image.thumbnail;
   }
 
-  // 尝试从缓存获取
-  const cached = await cacheManager.get(image.path, image.modifiedAt.getTime());
-  if (cached) {
-    return cached.thumbnail;
+  const cacheKey = image.path;
+  const existingTask = thumbnailPromises.get(cacheKey);
+  if (existingTask) {
+    return existingTask;
   }
 
-  // 生成新缩略图
-  const { thumbnail, dimensions } = await loadImageOnce(image.url);
+  const task = scheduleThumbnailTask(async () => {
+    if (image.thumbnail) {
+      return image.thumbnail;
+    }
 
-  // 保存到缓存
-  cacheManager.set({
-    path: image.path,
-    thumbnail,
-    width: dimensions.width,
-    height: dimensions.height,
-    size: image.size,
-    modifiedAt: image.modifiedAt.getTime(),
-    cachedAt: Date.now(),
-  }).catch(err => console.error('缓存保存失败:', err));
+    await ensureImageMetadata(image);
 
-  // 更新图片对象
-  image.thumbnail = thumbnail;
-  image.width = dimensions.width;
-  image.height = dimensions.height;
+    const modifiedAt = image.modifiedAt?.getTime?.() ?? 0;
 
-  return thumbnail;
-}
-
-/**
- * 统计文件夹内的图片数量
- */
-async function countImages(dirHandle: FileSystemDirectoryHandle): Promise<number> {
-  let count = 0;
-  try {
-    // @ts-ignore
-    for await (const entry of dirHandle.values()) {
-      if (entry.kind === 'file' && isImageFile(entry.name)) {
-        count++;
+    if (modifiedAt) {
+      const cached = await cacheManager.get(image.path, modifiedAt);
+      if (cached) {
+        image.thumbnail = cached.thumbnail;
+        image.width = cached.width;
+        image.height = cached.height;
+        image.size = cached.size;
+        return cached.thumbnail;
       }
     }
-  } catch (err) {
-    console.error('统计图片数量失败:', err);
-  }
-  return count;
-}
 
-/**
- * 创建图片文件对象（优化版：使用缓存 + 延迟加载缩略图）
- */
-async function createImageFile(
-  file: File,
-  handle: FileSystemFileHandle,
-  path: string,
-  useCache = true
-): Promise<ImageFile> {
-  const url = URL.createObjectURL(file);
-  const modifiedAt = file.lastModified;
+    const url = await ensureImageURL(image);
+    const { dimensions, thumbnail } = await loadImageOnce(url);
 
-  // 尝试从缓存获取
-  if (useCache) {
-    const cached = await cacheManager.get(path, modifiedAt);
-    if (cached) {
-      return {
-        id: crypto.randomUUID(),
-        name: file.name,
-        handle,
-        path,
-        blob: file,
-        url,
-        thumbnail: cached.thumbnail,
-        size: file.size,
-        width: cached.width,
-        height: cached.height,
-        type: file.type,
-        createdAt: new Date(file.lastModified),
-        modifiedAt: new Date(file.lastModified),
-        folderPath: path.slice(0, path.lastIndexOf('/')),
-      };
+    image.thumbnail = thumbnail;
+    image.width = dimensions.width;
+    image.height = dimensions.height;
+
+    if (modifiedAt) {
+      cacheManager
+        .set({
+          path: image.path,
+          thumbnail,
+          width: dimensions.width,
+          height: dimensions.height,
+          size: image.size,
+          modifiedAt,
+          cachedAt: Date.now(),
+        })
+        .catch((err) => console.error('缓存保存失败:', err));
     }
+
+    return thumbnail;
+  });
+
+  thumbnailPromises.set(cacheKey, task);
+
+  try {
+    return await task;
+  } finally {
+    thumbnailPromises.delete(cacheKey);
   }
-
-  // 缓存未命中，加载图片
-  const { dimensions, thumbnail } = await loadImageOnce(url);
-
-  // 保存到缓存
-  if (useCache) {
-    cacheManager.set({
-      path,
-      thumbnail,
-      width: dimensions.width,
-      height: dimensions.height,
-      size: file.size,
-      modifiedAt,
-      cachedAt: Date.now(),
-    }).catch(err => console.error('缓存保存失败:', err));
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    name: file.name,
-    handle,
-    path,
-    blob: file,
-    url,
-    thumbnail,
-    size: file.size,
-    width: dimensions.width,
-    height: dimensions.height,
-    type: file.type,
-    createdAt: new Date(file.lastModified),
-    modifiedAt: new Date(file.lastModified),
-    folderPath: path.slice(0, path.lastIndexOf('/')),
-  };
 }
 
-/**
- * 快速创建图片文件对象（不生成缩略图，用于快速扫描）
- */
-async function createImageFileFast(
-  file: File,
-  handle: FileSystemFileHandle,
-  path: string
-): Promise<ImageFile> {
-  const url = URL.createObjectURL(file);
+function createImagePlaceholder(handle: FileSystemFileHandle, path: string): ImageFile {
+  const lastSlash = path.lastIndexOf('/');
 
   return {
     id: crypto.randomUUID(),
-    name: file.name,
+    name: handle.name,
     handle,
     path,
-    blob: file,
-    url,
-    thumbnail: '', // 空缩略图，稍后按需加载
-    size: file.size,
-    width: 0, // 未知尺寸
+    blob: null,
+    url: '',
+    thumbnail: '',
+    size: 0,
+    width: 0,
     height: 0,
-    type: file.type,
-    createdAt: new Date(file.lastModified),
-    modifiedAt: new Date(file.lastModified),
-    folderPath: path.slice(0, path.lastIndexOf('/')),
+    type: '',
+    createdAt: new Date(0),
+    modifiedAt: new Date(0),
+    folderPath: lastSlash > -1 ? path.slice(0, lastSlash) : '',
+    metadataLoaded: false,
   };
 }
 
-/**
- * 一次性加载图片，同时获取尺寸和生成缩略图
- */
 async function loadImageOnce(
   url: string
 ): Promise<{ dimensions: { width: number; height: number }; thumbnail: string }> {
@@ -396,7 +320,7 @@ async function loadImageOnce(
           return;
         }
 
-        const maxSize = 300;
+        const maxSize = THUMBNAIL_SIZE;
         const scale = Math.min(
           maxSize / img.naturalWidth,
           maxSize / img.naturalHeight,

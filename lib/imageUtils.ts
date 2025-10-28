@@ -1,3 +1,4 @@
+import type { ImageFile } from '@/types';
 import { THUMBNAIL_SIZE } from './constants';
 
 /**
@@ -82,6 +83,90 @@ export function revokeObjectURL(url: string): void {
   } catch (err) {
     console.error('释放 URL 失败:', err);
   }
+}
+
+/**
+ * 批量释放图片占用的资源，避免 Object URL 泄漏
+ */
+export function releaseImageResources(images?: ImageFile[] | null): void {
+  if (!images?.length) return;
+
+  images.forEach((image) => {
+    if (image.url) {
+      revokeObjectURL(image.url);
+      image.url = '';
+    }
+
+    if (image.thumbnail && image.thumbnail.startsWith('blob:')) {
+      revokeObjectURL(image.thumbnail);
+    }
+
+    image.blob = null;
+    image.metadataLoaded = false;
+  });
+}
+
+/**
+ * 确保图片基础元数据已加载
+ */
+export async function ensureImageMetadata(image: ImageFile): Promise<ImageFile> {
+  if (image.metadataLoaded && image.blob) {
+    return image;
+  }
+
+  const file = await image.handle.getFile();
+  image.blob = file;
+  image.size = file.size;
+  image.type = file.type;
+
+  const lastModified = file.lastModified ?? Date.now();
+  const modifiedDate = new Date(lastModified);
+
+  image.modifiedAt = modifiedDate;
+  image.createdAt = modifiedDate;
+  image.metadataLoaded = true;
+
+  return image;
+}
+
+/**
+ * 确保图片拥有可用的 Object URL
+ */
+export async function ensureImageURL(image: ImageFile): Promise<string> {
+  await ensureImageMetadata(image);
+
+  if (!image.url && image.blob) {
+    image.url = URL.createObjectURL(image.blob);
+  }
+
+  return image.url;
+}
+
+/**
+ * 批量加载图片元数据，控制并发量
+ */
+export async function ensureImagesMetadata(
+  images: ImageFile[],
+  concurrency = 16
+): Promise<void> {
+  if (!images.length) return;
+
+  const queue = images.slice();
+  const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+    while (queue.length) {
+      const image = queue.shift();
+      if (!image) break;
+      if (image.metadataLoaded && image.blob) continue;
+
+      try {
+        await ensureImageMetadata(image);
+      } catch (err) {
+        console.error('加载图片元数据失败:', err);
+      }
+    }
+  });
+
+  await Promise.all(workers);
 }
 
 /**

@@ -61,10 +61,12 @@ export function FolderNode({ folder, selectedFolder, onSelect, onToggle, level }
         </svg>
 
         <span className="flex-1 text-sm truncate">{folder.name}</span>
-        
-        <span className="text-xs text-gray-500 dark:text-gray-400 px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
-          {folder.imageCount}
-        </span>
+
+        {typeof folder.imageCount === 'number' && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
+            {folder.imageCount}
+          </span>
+        )}
       </div>
 
       <Collapsible.Content>

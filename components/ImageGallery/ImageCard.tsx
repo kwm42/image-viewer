@@ -5,6 +5,7 @@ import type { ImageFile } from '@/types';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/utils';
 import { loadThumbnail } from '@/hooks/useFileSystem';
+import { ensureImageURL } from '@/lib/imageUtils';
 
 interface ImageCardProps {
   image: ImageFile;
@@ -46,19 +47,37 @@ export function ImageCard({ image, onClick, isSelected }: ImageCardProps) {
 
   // 当卡片可见且没有缩略图时，加载缩略图
   useEffect(() => {
-    if (isVisible && !thumbnail) {
-      setIsLoading(true);
-      loadThumbnail(image)
-        .then((thumb) => {
-          setThumbnail(thumb);
-          setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error('加载缩略图失败:', err);
-          setThumbnail(image.url); // 失败时使用原图
-          setIsLoading(false);
-        });
+    if (!isVisible || thumbnail) {
+      return;
     }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    loadThumbnail(image)
+      .then((thumb) => {
+        if (cancelled) return;
+        setThumbnail(thumb);
+        setIsLoading(false);
+      })
+      .catch(async (err) => {
+        console.error('加载缩略图失败:', err);
+        try {
+          const url = await ensureImageURL(image);
+          if (!cancelled) {
+            setThumbnail(url);
+            setIsLoading(false);
+          }
+        } catch (error) {
+          if (!cancelled) {
+            setIsLoading(false);
+          }
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isVisible, thumbnail, image]);
 
   return (
@@ -120,8 +139,12 @@ export function ImageCard({ image, onClick, isSelected }: ImageCardProps) {
           {image.name}
         </p>
         <div className="flex items-center justify-between text-white/80 text-xs">
-          <span>{image.width} × {image.height}</span>
-          <span>{formatFileSize(image.size)}</span>
+          <span>
+            {image.width > 0 && image.height > 0
+              ? `${image.width} × ${image.height}`
+              : '—'}
+          </span>
+          <span>{image.size > 0 ? formatFileSize(image.size) : '—'}</span>
         </div>
       </div>
 
