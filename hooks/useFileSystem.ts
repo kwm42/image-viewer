@@ -351,3 +351,9 @@ async function loadImageOnce(
     img.src = url;
   });
 }
+
+export function resetThumbnailQueue() {
+  activeThumbnailTasks = 0;
+  thumbnailTaskQueue.length = 0;
+  thumbnailPromises.clear();
+}

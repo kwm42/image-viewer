@@ -19,6 +19,12 @@ export function SlideshowSettingsPanel({
   onSettingsChange,
   onClose,
 }: SlideshowSettingsProps) {
+  const fitModeOptions: { value: SlideshowSettings['fitMode']; label: string }[] = [
+    { value: 'default', label: '默认样式' },
+    { value: 'contain', label: '自适应填充' },
+    { value: 'actual', label: '原始大小' },
+  ];
+
   return (
     <div className="absolute top-4 right-4 bg-gray-900/95 backdrop-blur-sm rounded-lg p-6 shadow-2xl z-[60] min-w-[320px]">
       <div className="flex items-center justify-between mb-4">
@@ -42,7 +48,7 @@ export function SlideshowSettingsPanel({
             value={[settings.interval]}
             onValueChange={([value]) => onSettingsChange({ interval: value })}
             min={1000}
-            max={10000}
+            max={100000}
             step={500}
             className="relative flex items-center select-none touch-none w-full h-5"
           >
@@ -162,6 +168,47 @@ export function SlideshowSettingsPanel({
             <Switch.Thumb className="block w-5 h-5 bg-white rounded-full transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px] shadow-md" />
           </Switch.Root>
         </label>
+
+        {/* 图片适应方式 */}
+        <div>
+          <label className="text-white text-sm block mb-2">图片适应方式</label>
+          <Select.Root
+            value={settings.fitMode}
+            onValueChange={(value) =>
+              onSettingsChange({ fitMode: value as SlideshowSettings['fitMode'] })
+            }
+          >
+            <Select.Trigger className="inline-flex items-center justify-between w-full px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-colors">
+              <Select.Value />
+              <Select.Icon>
+                <ChevronDownIcon />
+              </Select.Icon>
+            </Select.Trigger>
+
+            <Select.Portal>
+              <Select.Content
+                className="overflow-hidden bg-gray-900 rounded-lg shadow-2xl border border-white/10 z-[9999]"
+                position="popper"
+                sideOffset={5}
+              >
+                <Select.Viewport className="p-1">
+                  {fitModeOptions.map((option) => (
+                    <Select.Item
+                      key={option.value}
+                      value={option.value}
+                      className="relative flex items-center px-8 py-2 text-sm text-white rounded hover:bg-white/10 focus:bg-white/10 outline-none cursor-pointer select-none data-[highlighted]:bg-white/10"
+                    >
+                      <Select.ItemIndicator className="absolute left-2 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                      <Select.ItemText>{option.label}</Select.ItemText>
+                    </Select.Item>
+                  ))}
+                </Select.Viewport>
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
+        </div>
       </div>
     </div>
   );

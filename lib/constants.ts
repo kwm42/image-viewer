@@ -60,6 +60,7 @@ export const DEFAULT_SLIDESHOW_SETTINGS = {
   autoFullscreen: true,
   showInfo: true,
   showProgress: true,
+  fitMode: 'default' as const,
 };
 
 // 画廊默认设置

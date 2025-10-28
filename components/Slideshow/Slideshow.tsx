@@ -9,6 +9,7 @@ import { SlideshowSettingsPanel } from './SlideshowSettings';
 import { transitions, getTransition } from './transitions';
 import { IconButton } from '@/components/ui/IconButton';
 import { ensureImageURL } from '@/lib/imageUtils';
+import { cn } from '@/lib/utils';
 
 interface SlideshowProps {
   images: ImageFile[];
@@ -187,6 +188,7 @@ export function Slideshow({
 
   const variant = transitions[settings.transition] || transitions.fade;
   const transition = getTransition(settings.transition, settings.transitionDuration);
+  const currentFitMode = settings.fitMode ?? 'default';
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
@@ -220,7 +222,7 @@ export function Slideshow({
       )}
 
       {/* 图片显示区域 */}
-      <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+      <div className="relative w-full h-full flex items-center justify-center">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentIndex}
@@ -232,35 +234,53 @@ export function Slideshow({
             transition={transition}
             className="absolute inset-0 flex items-center justify-center"
           >
-            {isImageLoading ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg
-                  className="h-12 w-12 animate-spin text-white/70"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              </div>
-            ) : (
-              <img
-                src={currentImage.url}
-                alt={currentImage.name}
-                className="max-w-full max-h-full object-contain"
-              />
-            )}
+            <div
+              className={cn(
+                'relative w-full h-full flex items-center justify-center',
+                currentFitMode === 'actual' ? 'overflow-auto' : 'overflow-hidden'
+              )}
+            >
+              {isImageLoading ? (
+                <div className="flex items-center justify-center w-full h-full">
+                  <svg
+                    className="h-12 w-12 animate-spin text-white/70"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                </div>
+              ) : currentImage ? (
+                <img
+                  src={currentImage.url}
+                  alt={currentImage.name}
+                  className={cn(
+                    'select-none',
+                    currentFitMode === 'actual'
+                      ? 'max-w-none max-h-none'
+                      : currentFitMode === 'contain'
+                      ? 'w-full h-full object-contain'
+                      : 'max-w-full max-h-full object-contain'
+                  )}
+                />
+              ) : (
+                <div className="flex items-center justify-center w-full h-full text-white/60 text-sm">
+                  暂无可显示的图片
+                </div>
+              )}
+            </div>
 
             {/* 图片信息 */}
             {settings.showInfo && (

@@ -11,7 +11,8 @@ import type {
   SortBy,
   SortOrder,
 } from '@/types';
-import { useFileSystem } from '@/hooks/useFileSystem';
+import { useFileSystem, resetThumbnailQueue } from '@/hooks/useFileSystem';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { DEFAULT_GALLERY_SETTINGS, DEFAULT_SLIDESHOW_SETTINGS } from '@/lib/constants';
 import { releaseImageResources, ensureImageURL, ensureImagesMetadata } from '@/lib/imageUtils';
 import { cacheManager } from '@/lib/cacheManager';
@@ -69,6 +70,7 @@ interface AppActions {
   startSlideshow: () => void;
   stopSlideshow: () => void;
   updateSlideshowSettings: (settings: Partial<SlideshowSettings>) => void;
+  clearMemory: () => Promise<void>;
 }
 
 const AppContext = createContext<(AppState & AppActions) | null>(null);
@@ -97,6 +99,11 @@ const initialSlideshowState: SlideshowState = {
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [slideshowSettingsStorage, setSlideshowSettingsStorage] = useLocalStorage<SlideshowSettings>(
+    'app.slideshowSettings',
+    DEFAULT_SLIDESHOW_SETTINGS
+  );
+
   const [state, setState] = useState<AppState>({
     rootFolder: null,
     selectedFolder: null,
@@ -105,7 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     gallerySettings: DEFAULT_GALLERY_SETTINGS,
     viewerState: initialViewerState,
     slideshowState: initialSlideshowState,
-    slideshowSettings: DEFAULT_SLIDESHOW_SETTINGS,
+    slideshowSettings: slideshowSettingsStorage,
     isLoading: false,
     loadingProgress: null,
     error: null,
@@ -475,14 +482,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
   /**
    * 更新幻灯片设置
    */
-  const updateSlideshowSettings = useCallback((settings: Partial<SlideshowSettings>) => {
+  const updateSlideshowSettings = useCallback(
+    (settings: Partial<SlideshowSettings>) => {
+      setSlideshowSettingsStorage((prev) => ({
+        ...prev,
+        ...settings,
+      }));
+
+      setState((prev) => ({
+        ...prev,
+        slideshowSettings: {
+          ...prev.slideshowSettings,
+          ...settings,
+        },
+      }));
+    },
+    [setSlideshowSettingsStorage]
+  );
+
+  const clearMemory = useCallback(async () => {
+    const resetImages = (images: ImageFile[]): ImageFile[] => {
+      if (!images.length) return [];
+      releaseImageResources(images);
+      return images.map((img) => ({
+        ...img,
+        thumbnail: '',
+        metadataLoaded: false,
+      }));
+    };
+
+    resetThumbnailQueue();
+
     setState((prev) => ({
       ...prev,
-      slideshowSettings: {
-        ...prev.slideshowSettings,
-        ...settings,
-      },
+      allImages: resetImages(prev.allImages),
+      filteredImages: resetImages(prev.filteredImages),
+      viewerState: initialViewerState,
+      slideshowState: initialSlideshowState,
     }));
+
+    await cacheManager.clear().catch((err) => {
+      console.error('清空缓存失败:', err);
+    });
   }, []);
 
   const value: AppState & AppActions = {
@@ -497,6 +538,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     startSlideshow,
     stopSlideshow,
     updateSlideshowSettings,
+    clearMemory,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

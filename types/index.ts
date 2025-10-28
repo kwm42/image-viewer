@@ -48,7 +48,7 @@ export interface GallerySettings {
 }
 
 // 图片变换
-export type FitMode = 'contain' | 'cover' | 'actual' | 'custom';
+export type FitMode = 'default' | 'contain' | 'cover' | 'actual' | 'custom';
 
 export interface ImageTransform {
   scale: number;
@@ -81,6 +81,7 @@ export interface SlideshowSettings {
   autoFullscreen: boolean;
   showInfo: boolean;
   showProgress: boolean;
+  fitMode: FitMode;
 }
 
 // 幻灯片状态

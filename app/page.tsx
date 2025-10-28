@@ -6,6 +6,7 @@ import { ImageGallery } from '@/components/ImageGallery/ImageGallery';
 import { Toolbar } from '@/components/Toolbar/Toolbar';
 import { ImagePreview } from '@/components/ImagePreview';
 import { Slideshow } from '@/components/Slideshow';
+import { DebugPanel } from '@/components/Debug/DebugPanel';
 
 export default function Home() {
   const {
@@ -174,6 +175,8 @@ export default function Home() {
           onClose={stopSlideshow}
         />
       )}
+
+      <DebugPanel />
     </div>
   );
 }
