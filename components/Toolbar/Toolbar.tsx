@@ -5,6 +5,8 @@ import { ViewModeToggle } from '../ImageGallery/ViewModeToggle';
 import { SortSelect } from '../ImageGallery/SortSelect';
 import type { GallerySettings } from '@/types';
 import * as Switch from '@radix-ui/react-switch';
+import * as Select from '@radix-ui/react-select';
+import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons';
 
 interface ToolbarProps {
   settings: GallerySettings;
@@ -89,6 +91,50 @@ export function Toolbar({
             onSortByChange={(sortBy) => onSettingsChange({ sortBy })}
             onSortOrderChange={(sortOrder) => onSettingsChange({ sortOrder })}
           />
+
+          {/* 缩略图适应模式 */}
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            <Select.Root
+              value={settings.imageFit}
+              onValueChange={(value) => onSettingsChange({ imageFit: value as GallerySettings['imageFit'] })}
+            >
+              <Select.Trigger className="inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-w-[140px]">
+                <Select.Value placeholder="缩略图适应" />
+                <Select.Icon>
+                  <ChevronDownIcon />
+                </Select.Icon>
+              </Select.Trigger>
+
+              <Select.Portal>
+                <Select.Content
+                  className="overflow-hidden rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl z-[2000]"
+                  position="popper"
+                  sideOffset={5}
+                >
+                  <Select.Viewport className="p-1">
+                    <Select.Item
+                      value="cover"
+                      className="relative flex items-center gap-2 px-8 py-2 rounded-md text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 cursor-pointer select-none"
+                    >
+                      <Select.ItemIndicator className="absolute left-2 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                      <Select.ItemText>填充裁剪</Select.ItemText>
+                    </Select.Item>
+                    <Select.Item
+                      value="contain"
+                      className="relative flex items-center gap-2 px-8 py-2 rounded-md text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 cursor-pointer select-none"
+                    >
+                      <Select.ItemIndicator className="absolute left-2 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                      <Select.ItemText>完整适应</Select.ItemText>
+                    </Select.Item>
+                  </Select.Viewport>
+                </Select.Content>
+              </Select.Portal>
+            </Select.Root>
+          </div>
 
           {/* 视图模式切换 */}
           <ViewModeToggle

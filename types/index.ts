@@ -45,6 +45,7 @@ export interface GallerySettings {
   sortOrder: SortOrder;
   recursive: boolean;
   gridColumns: number;
+  imageFit: 'cover' | 'contain';
 }
 
 // 图片变换

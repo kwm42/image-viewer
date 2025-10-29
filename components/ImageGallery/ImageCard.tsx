@@ -11,9 +11,10 @@ interface ImageCardProps {
   image: ImageFile;
   onClick: () => void;
   isSelected?: boolean;
+  fitMode?: 'cover' | 'contain';
 }
 
-export function ImageCard({ image, onClick, isSelected }: ImageCardProps) {
+export function ImageCard({ image, onClick, isSelected, fitMode = 'cover' }: ImageCardProps) {
   const [thumbnail, setThumbnail] = useState(image.thumbnail);
   const [isLoading, setIsLoading] = useState(!image.thumbnail);
   const [isVisible, setIsVisible] = useState(false);
@@ -96,7 +97,10 @@ export function ImageCard({ image, onClick, isSelected }: ImageCardProps) {
         <img
           src={thumbnail}
           alt={image.name}
-          className="w-full h-full object-cover"
+          className={cn(
+            'w-full h-full transition-all duration-200',
+            fitMode === 'contain' ? 'object-contain bg-gray-900/60' : 'object-cover'
+          )}
           loading="lazy"
         />
       ) : isLoading ? (

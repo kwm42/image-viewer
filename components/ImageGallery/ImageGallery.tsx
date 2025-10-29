@@ -36,10 +36,15 @@ export function ImageGallery({ images, settings, onImageClick }: ImageGalleryPro
           <ImageGrid
             images={images}
             columns={settings.gridColumns}
+            imageFit={settings.imageFit}
             onImageClick={onImageClick}
           />
         ) : (
-          <ImageList images={images} onImageClick={onImageClick} />
+          <ImageList
+            images={images}
+            imageFit={settings.imageFit}
+            onImageClick={onImageClick}
+          />
         )}
       </div>
     </div>

@@ -10,11 +10,13 @@ import { ensureImageURL } from '@/lib/imageUtils';
 
 interface ImageListProps {
   images: ImageFile[];
+  imageFit: 'cover' | 'contain';
   onImageClick: (image: ImageFile, index: number) => void;
 }
 
 interface ListItemData {
   images: ImageFile[];
+  imageFit: 'cover' | 'contain';
   onImageClick: (image: ImageFile, index: number) => void;
 }
 
@@ -22,7 +24,7 @@ const ROW_HEIGHT = 96;
 const ROW_GAP = 8;
 
 const ListRow = ({ index, style, data }: ListChildComponentProps<ListItemData>) => {
-  const { images, onImageClick } = data;
+  const { images, onImageClick, imageFit } = data;
   const image = images[index];
 
   const [thumbnail, setThumbnail] = useState(image?.thumbnail ?? '');
@@ -88,7 +90,15 @@ const ListRow = ({ index, style, data }: ListChildComponentProps<ListItemData>) 
       >
         <div className="w-16 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
           {thumbnail ? (
-            <img src={thumbnail} alt={image.name} className="w-full h-full object-cover" loading="lazy" />
+            <img
+              src={thumbnail}
+              alt={image.name}
+              className={cn(
+                'w-full h-full transition-all duration-200',
+                imageFit === 'contain' ? 'object-contain bg-gray-900/60' : 'object-cover'
+              )}
+              loading="lazy"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,8 +132,8 @@ const ListRow = ({ index, style, data }: ListChildComponentProps<ListItemData>) 
   );
 };
 
-export function ImageList({ images, onImageClick }: ImageListProps) {
-  const itemData: ListItemData = { images, onImageClick };
+export function ImageList({ images, imageFit, onImageClick }: ImageListProps) {
+  const itemData: ListItemData = { images, imageFit, onImageClick };
 
   return (
     <div className="h-full w-full">

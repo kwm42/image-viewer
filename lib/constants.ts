@@ -70,4 +70,5 @@ export const DEFAULT_GALLERY_SETTINGS = {
   sortOrder: 'asc' as const,
   recursive: false,
   gridColumns: 4,
+  imageFit: 'cover' as const,
 };

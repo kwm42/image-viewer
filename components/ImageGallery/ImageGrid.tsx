@@ -7,11 +7,13 @@ import type { ImageFile } from '@/types';
 import { ImageCard } from './ImageCard';
 
 const GRID_GAP = 16;
-const MIN_CARD_SIZE = 150;
+const MIN_CARD_SIZE = 250;
+const MAX_CARD_SIZE = 300;
 
 interface ImageGridProps {
   images: ImageFile[];
   columns: number;
+  imageFit: 'cover' | 'contain';
   onImageClick: (image: ImageFile, index: number) => void;
 }
 
@@ -21,10 +23,11 @@ interface GridItemData {
   columnCount: number;
   cardSize: number;
   gap: number;
+  imageFit: 'cover' | 'contain';
 }
 
 const GridCell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<GridItemData>) => {
-  const { images, onImageClick, columnCount, cardSize, gap } = data;
+  const { images, onImageClick, columnCount, cardSize, gap, imageFit } = data;
   const index = rowIndex * columnCount + columnIndex;
 
   if (index >= images.length) {
@@ -45,12 +48,16 @@ const GridCell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProp
 
   return (
     <div style={cellStyle}>
-      <ImageCard image={image} onClick={() => onImageClick(image, index)} />
+      <ImageCard
+        image={image}
+        fitMode={imageFit}
+        onClick={() => onImageClick(image, index)}
+      />
     </div>
   );
 };
 
-export function ImageGrid({ images, columns, onImageClick }: ImageGridProps) {
+export function ImageGrid({ images, columns: _ignoredColumns, imageFit, onImageClick }: ImageGridProps) {
   return (
     <div className="h-full w-full">
       <AutoSizer>
@@ -59,19 +66,31 @@ export function ImageGrid({ images, columns, onImageClick }: ImageGridProps) {
             return null;
           }
 
-          const maxColumns = Math.max(1, columns);
-          const estimatedColumns = Math.max(1, Math.floor(width / (MIN_CARD_SIZE + GRID_GAP)));
-          const columnCount = Math.min(maxColumns, Math.max(1, estimatedColumns));
           const availableWidth = Math.max(width, MIN_CARD_SIZE + GRID_GAP);
-          const totalGap = (columnCount + 1) * GRID_GAP;
-          let tentativeCardSize = Math.floor((availableWidth - totalGap) / columnCount);
 
-          if (!Number.isFinite(tentativeCardSize) || tentativeCardSize <= 0) {
-            tentativeCardSize = Math.floor(availableWidth / columnCount) - GRID_GAP;
+          const computeCardSize = (cols: number) => {
+            const safeCols = Math.max(1, cols);
+            const totalGap = (safeCols + 1) * GRID_GAP;
+            let size = Math.floor((availableWidth - totalGap) / safeCols);
+
+            if (!Number.isFinite(size) || size <= 0) {
+              size = Math.floor(availableWidth / safeCols) - GRID_GAP;
+            }
+
+            const absoluteMax = Math.max(MIN_CARD_SIZE, availableWidth - GRID_GAP);
+            return Math.max(MIN_CARD_SIZE, Math.min(size, absoluteMax));
+          };
+
+          let columnCount = Math.max(1, Math.floor(availableWidth / (MIN_CARD_SIZE + GRID_GAP)));
+          let cardSize = computeCardSize(columnCount);
+
+          if (cardSize > MAX_CARD_SIZE) {
+            const desiredColumns = Math.max(1, Math.floor(availableWidth / (MAX_CARD_SIZE + GRID_GAP)));
+            columnCount = Math.max(columnCount, desiredColumns);
+            cardSize = computeCardSize(columnCount);
           }
 
-          const maxCardSize = Math.max(MIN_CARD_SIZE, availableWidth - GRID_GAP);
-          const cardSize = Math.max(MIN_CARD_SIZE, Math.min(tentativeCardSize, maxCardSize));
+          cardSize = Math.max(MIN_CARD_SIZE, Math.min(cardSize, MAX_CARD_SIZE));
           const columnWidth = cardSize + GRID_GAP;
           const rowHeight = cardSize + GRID_GAP;
           const rowCount = Math.ceil(images.length / columnCount);
@@ -82,6 +101,7 @@ export function ImageGrid({ images, columns, onImageClick }: ImageGridProps) {
             columnCount,
             cardSize,
             gap: GRID_GAP,
+            imageFit,
           };
 
           return (
