@@ -19,6 +19,34 @@ export function SlideshowSettingsPanel({
   onSettingsChange,
   onClose,
 }: SlideshowSettingsProps) {
+  const closeTimerRef = React.useRef<number | null>(null);
+
+  const cancelAutoClose = React.useCallback(() => {
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleAutoClose = React.useCallback(() => {
+    cancelAutoClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      onClose();
+    }, 3000);
+  }, [cancelAutoClose, onClose]);
+
+  const handleClose = React.useCallback(() => {
+    cancelAutoClose();
+    onClose();
+  }, [cancelAutoClose, onClose]);
+
+  React.useEffect(() => {
+    return () => {
+      cancelAutoClose();
+    };
+  }, [cancelAutoClose]);
+
   const fitModeOptions: { value: SlideshowSettings['fitMode']; label: string }[] = [
     { value: 'default', label: '默认样式' },
     { value: 'contain', label: '自适应填充' },
@@ -26,11 +54,15 @@ export function SlideshowSettingsPanel({
   ];
 
   return (
-    <div className="absolute top-4 right-4 bg-gray-900/95 backdrop-blur-sm rounded-lg p-6 shadow-2xl z-[60] min-w-[320px]">
+    <div
+      className="absolute top-4 right-4 bg-gray-900/95 backdrop-blur-sm rounded-lg p-6 shadow-2xl z-[60] min-w-[320px]"
+      onMouseEnter={cancelAutoClose}
+      onMouseLeave={scheduleAutoClose}
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-white font-semibold text-lg">幻灯片设置</h3>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="text-white/60 hover:text-white transition-colors"
         >
           ✕
